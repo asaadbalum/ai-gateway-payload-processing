@@ -75,6 +75,7 @@ func NewAPIKeyInjectionPlugin(reconcilerBuilder func() *builder.Builder, clientR
 			provider.Anthropic:     &auth.SimpleAuthGenerator{HeaderName: "x-api-key"},
 			provider.AzureOpenAI:   &auth.SimpleAuthGenerator{HeaderName: "api-key"},
 			provider.Vertex:        &auth.SimpleAuthGenerator{HeaderName: "Authorization", HeaderValuePrefix: "Bearer "},
+			provider.VertexOpenAI:  &auth.SimpleAuthGenerator{HeaderName: "Authorization", HeaderValuePrefix: "Bearer "},
 			provider.BedrockOpenAI: &auth.SimpleAuthGenerator{HeaderName: "Authorization", HeaderValuePrefix: "Bearer "},
 		},
 		store: store,

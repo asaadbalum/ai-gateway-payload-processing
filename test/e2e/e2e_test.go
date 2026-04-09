@@ -37,6 +37,7 @@ var providers = []Provider{
 	// bedrock-openai uses /v1/chat/completions (same as OpenAI), so the simulator
 	// validates against the OpenAI key until key-based provider dispatch is implemented.
 	{Name: "e2e-bedrock", Provider: "bedrock-openai", SimulatorKey: simulatorKeys["openai"]},
+	{Name: "e2e-vertex-openai", Provider: "vertex-openai", SimulatorKey: simulatorKeys["vertex"]},
 }
 
 func createProviderResources(p Provider) {
