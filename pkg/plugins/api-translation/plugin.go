@@ -44,13 +44,42 @@ const (
 var _ framework.RequestProcessor = &APITranslationPlugin{}
 var _ framework.ResponseProcessor = &APITranslationPlugin{}
 
-// APITranslationFactory defines the factory function for APITranslationPlugin.
-func APITranslationFactory(name string, _ json.RawMessage, _ framework.Handle) (framework.BBRPlugin, error) {
-	return NewAPITranslationPlugin().WithName(name), nil
+// apiTranslationConfig holds optional configuration for provider-specific translators.
+type apiTranslationConfig struct {
+	VertexOpenAI *vertexOpenAIConfig `json:"vertexOpenAI,omitempty"`
 }
 
-// NewAPITranslationPlugin creates a new plugin instance with all registered providers.
+type vertexOpenAIConfig struct {
+	Project  string `json:"project"`
+	Location string `json:"location"`
+	Endpoint string `json:"endpoint"`
+}
+
+// APITranslationFactory defines the factory function for APITranslationPlugin.
+func APITranslationFactory(name string, rawConfig json.RawMessage, _ framework.Handle) (framework.BBRPlugin, error) {
+	var config apiTranslationConfig
+	if len(rawConfig) > 0 {
+		if err := json.Unmarshal(rawConfig, &config); err != nil {
+			return nil, fmt.Errorf("failed to parse api-translation plugin config: %w", err)
+		}
+	}
+	return NewAPITranslationPluginWithConfig(config).WithName(name), nil
+}
+
+// NewAPITranslationPlugin creates a new plugin instance with default config.
 func NewAPITranslationPlugin() *APITranslationPlugin {
+	return NewAPITranslationPluginWithConfig(apiTranslationConfig{})
+}
+
+// NewAPITranslationPluginWithConfig creates a new plugin instance with the given config.
+func NewAPITranslationPluginWithConfig(config apiTranslationConfig) *APITranslationPlugin {
+	var project, location, endpoint string
+	if config.VertexOpenAI != nil {
+		project = config.VertexOpenAI.Project
+		location = config.VertexOpenAI.Location
+		endpoint = config.VertexOpenAI.Endpoint
+	}
+
 	return &APITranslationPlugin{
 		typedName: plugin.TypedName{
 			Type: APITranslationPluginType,
@@ -61,7 +90,7 @@ func NewAPITranslationPlugin() *APITranslationPlugin {
 			provider.Anthropic:     anthropic.NewAnthropicTranslator(),
 			provider.AzureOpenAI:   azure.NewAzureOpenAITranslator(),
 			provider.Vertex:        vertex.NewVertexTranslator(),
-			provider.VertexOpenAI:  vertex.NewVertexOpenAITranslator("", "", ""),
+			provider.VertexOpenAI:  vertex.NewVertexOpenAITranslator(project, location, endpoint),
 			provider.BedrockOpenAI: bedrock.NewBedrockOpenAITranslator(),
 		},
 	}
