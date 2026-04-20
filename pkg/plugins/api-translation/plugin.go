@@ -72,15 +72,22 @@ func APITranslationFactory(name string, rawConfig json.RawMessage, _ framework.H
 }
 
 // NewAPITranslationPlugin creates a new plugin instance with the given config.
+// If vertexOpenAI config is provided, the vertex-openai translator is registered.
+// If vertexOpenAI config is provided but has empty fields, an error is returned.
 func NewAPITranslationPlugin(config apiTranslationConfig) (*APITranslationPlugin, error) {
+	openaiTranslator := openai.NewOpenAITranslator()
+	anthropicTranslator := anthropic.NewAnthropicTranslator()
+	azureTranslator := azure.NewAzureOpenAITranslator()
+	bedrockTranslator := bedrock.NewBedrockOpenAITranslator()
+	// vertex (native GenerateContent) is not used in 3.4 ExternalModel flow.
+	// Uncomment when vertex (non-OpenAI) provider support is needed.
+	// vertexTranslator := vertex.NewVertexTranslator()
+
 	providers := map[string]translator.Translator{
-		provider.OpenAI:        openai.NewOpenAITranslator(),
-		provider.Anthropic:     anthropic.NewAnthropicTranslator(),
-		provider.AzureOpenAI:   azure.NewAzureOpenAITranslator(),
-		// provider.Vertex uses the native GenerateContent API — not used in 3.4 ExternalModel flow.
-		// Uncomment when vertex (non-OpenAI) provider support is needed.
-		// provider.Vertex:     vertex.NewVertexTranslator(),
-		provider.BedrockOpenAI: bedrock.NewBedrockOpenAITranslator(),
+		provider.OpenAI:        openaiTranslator,
+		provider.Anthropic:     anthropicTranslator,
+		provider.AzureOpenAI:   azureTranslator,
+		provider.BedrockOpenAI: bedrockTranslator,
 	}
 
 	if config.VertexOpenAI != nil {
