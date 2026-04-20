@@ -63,16 +63,35 @@ func APITranslationFactory(name string, rawConfig json.RawMessage, _ framework.H
 			return nil, fmt.Errorf("failed to parse api-translation plugin config: %w", err)
 		}
 	}
-	return NewAPITranslationPlugin(config).WithName(name), nil
+
+	p, err := NewAPITranslationPlugin(config)
+	if err != nil {
+		return nil, err
+	}
+	return p.WithName(name), nil
 }
 
 // NewAPITranslationPlugin creates a new plugin instance with the given config.
-func NewAPITranslationPlugin(config apiTranslationConfig) *APITranslationPlugin {
-	var vertexOpenAIProject, vertexOpenAILocation, vertexOpenAIEndpoint string
+func NewAPITranslationPlugin(config apiTranslationConfig) (*APITranslationPlugin, error) {
+	providers := map[string]translator.Translator{
+		provider.OpenAI:        openai.NewOpenAITranslator(),
+		provider.Anthropic:     anthropic.NewAnthropicTranslator(),
+		provider.AzureOpenAI:   azure.NewAzureOpenAITranslator(),
+		// provider.Vertex uses the native GenerateContent API — not used in 3.4 ExternalModel flow.
+		// Uncomment when vertex (non-OpenAI) provider support is needed.
+		// provider.Vertex:     vertex.NewVertexTranslator(),
+		provider.BedrockOpenAI: bedrock.NewBedrockOpenAITranslator(),
+	}
+
 	if config.VertexOpenAI != nil {
-		vertexOpenAIProject = config.VertexOpenAI.Project
-		vertexOpenAILocation = config.VertexOpenAI.Location
-		vertexOpenAIEndpoint = config.VertexOpenAI.Endpoint
+		if config.VertexOpenAI.Project == "" || config.VertexOpenAI.Location == "" || config.VertexOpenAI.Endpoint == "" {
+			return nil, fmt.Errorf("vertexOpenAI config requires non-empty project, location, and endpoint")
+		}
+		providers[provider.VertexOpenAI] = vertex.NewVertexOpenAITranslator(
+			config.VertexOpenAI.Project,
+			config.VertexOpenAI.Location,
+			config.VertexOpenAI.Endpoint,
+		)
 	}
 
 	return &APITranslationPlugin{
@@ -80,15 +99,8 @@ func NewAPITranslationPlugin(config apiTranslationConfig) *APITranslationPlugin 
 			Type: APITranslationPluginType,
 			Name: APITranslationPluginType,
 		},
-		providers: map[string]translator.Translator{
-			provider.OpenAI:        openai.NewOpenAITranslator(),
-			provider.Anthropic:     anthropic.NewAnthropicTranslator(),
-			provider.AzureOpenAI:   azure.NewAzureOpenAITranslator(),
-			provider.Vertex:        vertex.NewVertexTranslator(),
-			provider.VertexOpenAI:  vertex.NewVertexOpenAITranslator(vertexOpenAIProject, vertexOpenAILocation, vertexOpenAIEndpoint),
-			provider.BedrockOpenAI: bedrock.NewBedrockOpenAITranslator(),
-		},
-	}
+		providers: providers,
+	}, nil
 }
 
 // APITranslationPlugin translates inference API requests and responses between
