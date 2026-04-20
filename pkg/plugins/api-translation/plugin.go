@@ -44,9 +44,9 @@ const (
 var _ framework.RequestProcessor = &APITranslationPlugin{}
 var _ framework.ResponseProcessor = &APITranslationPlugin{}
 
-// apiTranslationConfig holds optional configuration for provider-specific translators.
+// apiTranslationConfig holds configuration for provider-specific translators.
 type apiTranslationConfig struct {
-	VertexOpenAI *vertexOpenAIConfig `json:"vertexOpenAI,omitempty"`
+	VertexOpenAI *vertexOpenAIConfig `json:"vertexOpenAI"`
 }
 
 type vertexOpenAIConfig struct {
@@ -63,21 +63,16 @@ func APITranslationFactory(name string, rawConfig json.RawMessage, _ framework.H
 			return nil, fmt.Errorf("failed to parse api-translation plugin config: %w", err)
 		}
 	}
-	return NewAPITranslationPluginWithConfig(config).WithName(name), nil
+	return NewAPITranslationPlugin(config).WithName(name), nil
 }
 
-// NewAPITranslationPlugin creates a new plugin instance with default config.
-func NewAPITranslationPlugin() *APITranslationPlugin {
-	return NewAPITranslationPluginWithConfig(apiTranslationConfig{})
-}
-
-// NewAPITranslationPluginWithConfig creates a new plugin instance with the given config.
-func NewAPITranslationPluginWithConfig(config apiTranslationConfig) *APITranslationPlugin {
-	var project, location, endpoint string
+// NewAPITranslationPlugin creates a new plugin instance with the given config.
+func NewAPITranslationPlugin(config apiTranslationConfig) *APITranslationPlugin {
+	var vertexOpenAIProject, vertexOpenAILocation, vertexOpenAIEndpoint string
 	if config.VertexOpenAI != nil {
-		project = config.VertexOpenAI.Project
-		location = config.VertexOpenAI.Location
-		endpoint = config.VertexOpenAI.Endpoint
+		vertexOpenAIProject = config.VertexOpenAI.Project
+		vertexOpenAILocation = config.VertexOpenAI.Location
+		vertexOpenAIEndpoint = config.VertexOpenAI.Endpoint
 	}
 
 	return &APITranslationPlugin{
@@ -90,7 +85,7 @@ func NewAPITranslationPluginWithConfig(config apiTranslationConfig) *APITranslat
 			provider.Anthropic:     anthropic.NewAnthropicTranslator(),
 			provider.AzureOpenAI:   azure.NewAzureOpenAITranslator(),
 			provider.Vertex:        vertex.NewVertexTranslator(),
-			provider.VertexOpenAI:  vertex.NewVertexOpenAITranslator(project, location, endpoint),
+			provider.VertexOpenAI:  vertex.NewVertexOpenAITranslator(vertexOpenAIProject, vertexOpenAILocation, vertexOpenAIEndpoint),
 			provider.BedrockOpenAI: bedrock.NewBedrockOpenAITranslator(),
 		},
 	}
